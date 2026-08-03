@@ -1,0 +1,40 @@
+# Dependências
+node_modules/
+
+# Variáveis de Ambiente (Segurança Crítica)
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Bancos de Dados Locais (Segurança Crítica)
+dev.db
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3
+
+# Arquivos de Dados e Exportações (Proteção LGPD)
+*.csv
+*.xlsx
+snapshot_oracle.csv
+uploads/
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+logs/
+*.log
+
+# Build e Dist
+dist/
+build/
+.tscache/
+
+# IDE e SO
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

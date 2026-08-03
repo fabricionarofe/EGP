@@ -1,0 +1,8 @@
+node_modules/
+.env
+.env.*
+*.db
+*.csv
+dist/
+build/
+.DS_Store

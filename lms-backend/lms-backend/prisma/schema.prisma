@@ -1,0 +1,63 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Perfil {
+  ALUNO
+  INSTRUTOR
+  ADMIN
+}
+
+model Usuario {
+  id        String   @id @default(uuid())
+  nome      String
+  email     String   @unique
+  senha     String
+  perfil    Perfil   @default(ALUNO)
+  criadoEm  DateTime @default(now())
+
+  // Relacionamentos
+  cursosCriados Curso[]     @relation("InstrutorCursos")
+  matriculas    Matricula[]
+}
+
+model Curso {
+  id          String   @id @default(uuid())
+  titulo      String
+  descricao   String?
+  horas       Int
+  instrutorId String
+  criadoEm    DateTime @default(now())
+
+  instrutor   Usuario  @relation("InstrutorCursos", fields: [instrutorId], references: [id])
+  turmas      Turma[]
+}
+
+model Turma {
+  id        String   @id @default(uuid())
+  nome      String
+  cursoId   String
+  criadoEm  DateTime @default(now())
+
+  curso      Curso       @relation(fields: [cursoId], references: [id])
+  matriculas Matricula[]
+}
+
+model Matricula {
+  id        String   @id @default(uuid())
+  usuarioId String
+  turmaId   String
+  nota      Float?   // Importante para a taxa de desempenho no BI
+  criadoEm  DateTime @default(now())
+
+  aluno     Usuario @relation(fields: [usuarioId], references: [id])
+  turma     Turma   @relation(fields: [turmaId], references: [id])
+
+  // Impede que o mesmo aluno seja matriculado duas vezes na mesma turma
+  @@unique([usuarioId, turmaId])
+}

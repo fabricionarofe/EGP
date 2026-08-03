@@ -1,0 +1,137 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// Enum para os perfis de usuário
+enum Perfil {
+  ALUNO
+  INSTRUTOR
+  ADMIN
+}
+
+// Modelo de Usuário
+model Usuario {
+  id            String      @id @default(uuid())
+  nome          String
+  email         String      @unique
+  senha         String 
+  perfil        Perfil
+  fotoPerfil    String?     // URL ou Base64 longo para ícone
+  ativo         Boolean     @default(true) // Controle de Exclusão Lógica (Soft Delete)
+
+  // Novos campos para Aluno
+  matricula     String?
+  cpf           String?
+  lotacao       String?
+  
+  // Novos campos para Instrutor
+  especialidade String?
+  areaFormacao  String?
+
+  cursosCriados Curso[]     @relation("InstrutorCursos")
+  inscricoes    Inscricao[]
+
+  @@map("usuarios")
+}
+
+// Modelo de Curso
+model Curso {
+  id           String      @id @default(uuid())
+  titulo       String
+  descricao    String
+  cargaHoraria Int?        // Novo campo acordado
+  instrutorId  String
+  instrutor    Usuario     @relation("InstrutorCursos", fields: [instrutorId], references: [id])
+  alunos       Inscricao[]
+  modulos      Modulo[]
+  avisos       Aviso[]
+  materiais    MaterialApoio[]
+
+  @@map("cursos")
+}
+
+// Modelo de Aviso (Mural)
+model Aviso {
+  id        String   @id @default(uuid())
+  conteudo  String
+  cursoId   String
+  curso     Curso    @relation(fields: [cursoId], references: [id], onDelete: Cascade)
+  criadoEm  DateTime @default(now())
+
+  @@map("avisos")
+}
+
+// Modelo de Material de Apoio (Links/Arquivos)
+model MaterialApoio {
+  id        String   @id @default(uuid())
+  titulo    String
+  tipo      String   // 'PDF', 'DOC', 'LINK', 'VIDEO'
+  url       String
+  cursoId   String
+  curso     Curso    @relation(fields: [cursoId], references: [id], onDelete: Cascade)
+  criadoEm  DateTime @default(now())
+
+  @@map("materiais_apoio")
+}
+
+// Modelo de Módulo (agrupa aulas)
+model Modulo {
+  id        String  @id @default(uuid())
+  titulo    String
+  cursoId   String
+  curso     Curso   @relation(fields: [cursoId], references: [id])
+  aulas     Aula[]
+
+  @@map("modulos")
+}
+
+// Modelo de Aula
+model Aula {
+  id        String  @id @default(uuid())
+  titulo    String
+  conteudo  String? // Texto formatado ou markdown
+  videoUrl  String? // Link do youtube
+  moduloId  String
+  modulo    Modulo  @relation(fields: [moduloId], references: [id])
+
+  @@map("aulas")
+}
+
+// Tabela de ligação para a relação Muitos-para-Muitos entre Aluno e Curso
+model Inscricao {
+  alunoId       String
+  cursoId       String
+  dataInscricao DateTime @default(now())
+
+  // Controle de Presença e Notas
+  nota1         Float?
+  nota2         Float?
+  notaFinal     Float?
+  presencas     Int      @default(0)
+  faltas        Int      @default(0)
+
+  aluno Usuario @relation(fields: [alunoId], references: [id])
+  curso Curso   @relation(fields: [cursoId], references: [id])
+
+  @@id([alunoId, cursoId])
+  @@map("inscricoes")
+}
+
+// Tabela Espelho do RH da Prefeitura (Usada apenas para validar novos cadastros)
+model ServidorOracle {
+  cpf       String  @id
+  nome      String
+  matricula String?
+  lotacao   String?
+
+  @@map("servidores_oracle")
+}
