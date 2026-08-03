@@ -1,17 +1,21 @@
-import oracledb from 'oracledb';
+// Importação nativa removida do topo para não quebrar no Vercel
 import { prisma } from '../../prisma/prisma';
-import bcrypt from 'bcrypt';
-
-// Ativa o Thick Mode apontando para a pasta onde o usuário extraiu as DLLs legadas
-try {
-  oracledb.initOracleClient({ libDir: 'C:\\oracle\\instantclient_12_1' });
-} catch (err) {
-  console.error('[ORACLE SYNC] Aviso: Cliente Oracle não inicializado. Erro:', err);
-}
+import bcrypt from 'bcryptjs';
 
 export async function sincronizarServidores() {
+  let oracledb: any;
   let connection;
+  
   try {
+    // Carrega dinamicamente só se a função for chamada
+    oracledb = require('oracledb');
+    
+    try {
+      oracledb.initOracleClient({ libDir: 'C:\\oracle\\instantclient_12_1' });
+    } catch (err) {
+      console.error('[ORACLE SYNC] Aviso: Cliente Oracle não inicializado. Erro:', err);
+    }
+    
     const user = process.env.ORACLE_USER;
     const password = process.env.ORACLE_PASSWORD;
     const connectString = process.env.ORACLE_CONNECTION_STRING;
