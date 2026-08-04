@@ -37,43 +37,32 @@ export async function sincronizarServidores() {
 
     console.log('[ORACLE SYNC] Conexão bem-sucedida! Extraindo dados únicos...');
 
-    // Usando DISTINCT para evitar as 9 milhões de repetições de contracheque
-    const query = `SELECT DISTINCT NOMFUN, CPF, MATCON, LOTACAO FROM ${tableName}`;
+    // Usando DISTINCT para evitar repetições
+    const query = `SELECT DISTINCT NOMFUN, MATCON FROM ${tableName} WHERE MATCON IS NOT NULL`;
     
     const result = await connection.execute(query, [], { 
       outFormat: oracledb.OUT_FORMAT_OBJECT,
-      maxRows: 100000 // Garante que a biblioteca não pare no limite padrão
+      maxRows: 100000 
     });
     const servidores: any[] = result.rows || [];
 
-    console.log(`[ORACLE SYNC] ${servidores.length} servidores encontrados. Iniciando atualização no banco local...`);
+    console.log(`[ORACLE SYNC] ${servidores.length} matrículas encontradas. Iniciando atualização...`);
 
     let atualizados = 0;
-    let criados = 0; // Para Tabela Espelho, tudo é "sincronizado", podemos somar
 
     for (const srv of servidores) {
       const nome = srv.NOMFUN || srv.NOME || srv.NOME_SERVIDOR || 'Servidor Sem Nome';
-      const matricula = srv.MATCON?.toString() || srv.MATRICULA?.toString() || null;
-      let cpf = srv.CPF?.toString() || null;
-      const lotacao = srv.LOTACAO || null;
+      const matricula = srv.MATCON?.toString() || srv.MATRICULA?.toString();
 
-      if (!cpf) continue; // Ignora se não houver CPF, pois é a chave primária
+      if (!matricula) continue; // Ignora se não houver matrícula
       
-      cpf = cpf.replace(/\\D/g, ''); // Remove pontuação do CPF
-
       // Sincroniza na Tabela Espelho (Update or Insert)
       await prisma.servidorOracle.upsert({
-        where: { cpf: cpf },
-        update: {
-          nome: nome,
-          matricula: matricula,
-          lotacao: lotacao
-        },
+        where: { matricula: matricula },
+        update: { nome: nome },
         create: {
-          cpf: cpf,
-          nome: nome,
           matricula: matricula,
-          lotacao: lotacao
+          nome: nome
         }
       });
       atualizados++;

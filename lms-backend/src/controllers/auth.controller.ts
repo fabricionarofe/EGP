@@ -35,31 +35,31 @@ export const register = async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Este e-mail já está em uso.' });
     }
 
-    // 3. Validação na Base Espelho do RH (Cancela)
-    // Se for Aluno, obriga a ter o CPF na base da Prefeitura
+    // 3. Validação na Base Espelho do RH
+    // Se for Aluno, obriga a ter a Matrícula na base da Prefeitura
     let matriculaFinal = matricula;
+    let cpfFinal = cpf; // Continua salvando o CPF no perfil do aluno se ele informar
     let lotacaoFinal = lotacao;
-    let cpfFinal = cpf;
 
     if (perfil === 'ALUNO') {
-      if (!cpf) {
-        return res.status(400).json({ error: 'O CPF é obrigatório para alunos.' });
+      if (!matricula) {
+        return res.status(400).json({ error: 'A matrícula é obrigatória para alunos.' });
       }
 
-      const cpfLimpo = cpf.replace(/\\D/g, '');
-      cpfFinal = cpfLimpo;
+      if (cpf) {
+        cpfFinal = cpf.replace(/\D/g, '');
+      }
       
       const servidorValido = await prisma.servidorOracle.findUnique({
-        where: { cpf: cpfLimpo }
+        where: { matricula: matricula }
       });
 
       if (!servidorValido) {
-        return res.status(403).json({ error: 'Acesso Negado: Seu CPF não foi encontrado na base de servidores da Prefeitura.' });
+        return res.status(403).json({ error: 'Acesso Negado: Sua matrícula não foi encontrada na base de servidores da Prefeitura.' });
       }
 
-      // Aproveitamos para salvar os dados oficiais do RH no perfil dele!
-      matriculaFinal = servidorValido.matricula || matricula;
-      lotacaoFinal = servidorValido.lotacao || lotacao;
+      // Aproveitamos para garantir que o nome da conta use a matrícula oficial do RH
+      matriculaFinal = servidorValido.matricula;
     }
 
     // 4. Criptografar a senha

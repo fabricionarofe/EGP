@@ -128,10 +128,8 @@ model Inscricao {
 
 // Tabela Espelho do RH da Prefeitura (Usada apenas para validar novos cadastros)
 model ServidorOracle {
-  cpf       String  @id
+  matricula String @id
   nome      String
-  matricula String?
-  lotacao   String?
 
   @@map("servidores_oracle")
 }
