@@ -50,23 +50,32 @@ export async function sincronizarServidores() {
 
     let atualizados = 0;
 
-    for (const srv of servidores) {
-      const nome = srv.NOMFUN || srv.NOME || srv.NOME_SERVIDOR || 'Servidor Sem Nome';
-      const matricula = srv.MATCON?.toString() || srv.MATRICULA?.toString();
+    // Limpa a tabela atual para não termos que fazer 37 mil upserts um por um
+    console.log('[ORACLE SYNC] Limpando dados antigos...');
+    await prisma.servidorOracle.deleteMany({});
 
-      if (!matricula) continue; // Ignora se não houver matrícula
-      
-      // Sincroniza na Tabela Espelho (Update or Insert)
-      await prisma.servidorOracle.upsert({
-        where: { matricula: matricula },
-        update: { nome: nome },
-        create: {
-          matricula: matricula,
-          nome: nome
-        }
+    // Transforma os dados no formato do Prisma
+    const dadosParaInserir = servidores
+      .map(srv => {
+        const nome = srv.NOMFUN || srv.NOME || srv.NOME_SERVIDOR || 'Servidor Sem Nome';
+        const matricula = srv.MATCON?.toString() || srv.MATRICULA?.toString();
+        return { nome, matricula };
+      })
+      .filter(srv => srv.matricula); // Garante que só passa se tiver matrícula
+
+    // Insere em lotes de 5000 para ser ultrarrápido e não dar timeout
+    const TAMANHO_LOTE = 5000;
+    for (let i = 0; i < dadosParaInserir.length; i += TAMANHO_LOTE) {
+      const lote = dadosParaInserir.slice(i, i + TAMANHO_LOTE);
+      await prisma.servidorOracle.createMany({
+        data: lote,
+        skipDuplicates: true
       });
-      atualizados++;
+      atualizados += lote.length;
+      console.log(`[ORACLE SYNC] Inseridos ${atualizados} de ${dadosParaInserir.length}...`);
     }
+
+    console.log(`[ORACLE SYNC] Sincronização concluída! ${atualizados} matrículas salvas na nuvem.`);
 
     console.log(`[ORACLE SYNC] Sincronização Finalizada. ${atualizados} registros processados na base espelho.`);
     return { success: true, message: `Base espelho sincronizada! ${atualizados} servidores processados.` };
